@@ -1,0 +1,111 @@
+package org.firstinspires.ftc.teamcode;
+
+import com.qualcomm.hardware.bosch.BNO055IMU;
+import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator;
+import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
+import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
+
+
+@Autonomous
+public class AutonomousDriveBase extends LinearOpMode {
+
+    DcMotor leftMotor;
+    DcMotor rightMotor;
+    BNO055IMU imu;
+
+    @Override
+    public void runOpMode() throws InterruptedException {
+
+        leftMotor = hardwareMap.get(DcMotor.class, "leftMotor");
+        rightMotor = hardwareMap.get(DcMotor.class, "rightMotor");
+
+        leftMotor.setDirection(DcMotorSimple.Direction.REVERSE);
+
+        leftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        rightMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
+        leftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        rightMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        leftMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        rightMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+        imu = hardwareMap.get(BNO055IMU.class, "imu");
+        BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
+        parameters.angleUnit = BNO055IMU.AngleUnit.DEGREES;
+        parameters.accelUnit = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC;
+        parameters.accelerationIntegrationAlgorithm = new JustLoggingAccelerationIntegrator();
+        imu.initialize(parameters);
+
+        waitForStart();
+
+        // INSERT AUTONOMOUS CODE BELOW USING TURN() OR DRIVESTRAIGHT()
+
+
+
+    }
+
+    public void driveStraight(double distance, double power) {
+
+        leftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        rightMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        leftMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        rightMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+        double leftDistance = -leftMotor.getCurrentPosition();
+        double rightDistance = -rightMotor.getCurrentPosition();
+
+        double sign = Math.signum(distance);
+
+        while(opModeIsActive() && ((leftDistance + rightDistance) / 2) < distance) {
+
+            double diff = leftDistance - rightDistance;
+
+            double leftPower = power;
+            double rightPower = power;
+
+            if (diff > 0) leftPower = rightPower / 2;
+            else rightPower = leftPower / 2;
+
+            leftMotor.setPower(leftPower * sign);
+            rightMotor.setPower(rightPower * sign);
+
+            leftDistance = -leftMotor.getCurrentPosition();
+            rightDistance = -rightMotor.getCurrentPosition();
+
+            telemetry.addData("left distance", leftDistance);
+            telemetry.addData("right distance", rightDistance);
+            telemetry.update();
+
+        }
+
+        leftMotor.setPower(0);
+        rightMotor.setPower(0);
+
+    }
+
+    public void turn(double turnAngle, double motorSpeed) {
+
+        double angle = imu.getAngularOrientation(AxesReference.EXTRINSIC, AxesOrder.XYZ, AngleUnit.DEGREES).thirdAngle;
+        double sign = Math.signum(turnAngle - angle);
+
+        while(opModeIsActive() && Math.signum(turnAngle - angle) == sign) {
+
+            leftMotor.setPower(-motorSpeed * sign);
+            rightMotor.setPower(motorSpeed * sign);
+            angle = imu.getAngularOrientation(AxesReference.EXTRINSIC, AxesOrder.XYZ, AngleUnit.DEGREES).thirdAngle;
+            telemetry.addData("angle", angle);
+            telemetry.update();
+
+        }
+
+        leftMotor.setPower(0);
+        rightMotor.setPower(0);
+
+    }
+
+}
